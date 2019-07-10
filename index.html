@@ -7,7 +7,6 @@
         <link rel="icon" href="logo.png">
         <title>Socal Quakes</title>
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-        <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.1.0/mapbox-gl.js'></script>
         <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v1.1.0/mapbox-gl.css' rel='stylesheet' />
         <style>
             @import url('https://fonts.googleapis.com/css?family=Montserrat:400,800,900');
@@ -130,6 +129,7 @@
         <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+        <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.1.0/mapbox-gl.js'></script>
         <script>
 
             // Get route params for initiation
@@ -298,6 +298,22 @@
                     map.getCanvas().style.cursor = '';
                     popup.remove();
                 });
+
+                map.on('click', 'smalldot', function (e) {
+                    let windowWidth = window.innerWidth || 800;
+                    let change = (180*(e.point.x/windowWidth))-90;//bearing change by marker pos
+                    let bearing = map.getBearing();   
+                    var coordinates = e.features[0].geometry.coordinates.slice();
+
+                    bearing += change;
+                    map.easeTo({
+                        center: coordinates,
+                        bearing: bearing,
+                        pitch: 60,
+                        zoom: 10,
+                        duration: 8000
+                    });
+                })
 
                 map.on('touchstart', 'smalldot', function(e) {
 
