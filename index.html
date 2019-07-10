@@ -1,0 +1,333 @@
+
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width,initial-scale=1.0">
+        <link rel="icon" href="logo.png">
+        <title>OC Alerts</title>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+        <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.1.0/mapbox-gl.js'></script>
+        <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v1.1.0/mapbox-gl.css' rel='stylesheet' />
+        <style>
+            @import url('https://fonts.googleapis.com/css?family=Montserrat:400,800,900');
+            body{
+                margin: 0px;
+            }
+            #app {
+                font-family: 'Avenir', Helvetica, Arial, sans-serif;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+                color: #2c3e50;
+            }
+            .forward{
+                z-index: 1;
+                pointer-events: none;
+            }
+            #header{
+                padding-top:30px;
+                position: absolute;
+                top: 0;
+                width: 100%;
+                color: #d3e5f7;
+            }
+            #header h1{
+                font-family: 'Montserrat', Arial, Helvetica, sans-serif;
+                font-weight: 900;
+                font-size:50px;
+            }
+            #header small{
+                font-weight: 600;
+                font-size: 40%;
+            }
+            #header .logo{
+                width: 55px;
+                margin: 5px;
+            }
+            @media only screen and (max-width: 768px) {
+                #header h1 {
+                font-size:32px;
+                }
+                #header .logo {
+                width: 34px;
+                }
+            }
+            #map {
+                width: 100%;
+                height: 100vh;
+            }
+            #map .mapboxgl-canvas {
+                position: inherit !important;
+            }
+            .mapboxgl-popup-content {
+                font-family: "Montserrat";    
+                padding: 15px;
+            }
+            #footer{
+                position: absolute;
+                bottom: 0;
+                width:100%;
+                font-size: 10px;
+                color: #d3e5f7;
+            }
+            .fadeIn {
+                -webkit-animation: fadein 2s; /* Safari, Chrome and Opera > 12.1 */     
+                -moz-animation: fadein 2s; /* Firefox < 16 */
+                -ms-animation: fadein 2s; /* Internet Explorer */
+                -o-animation: fadein 2s; /* Opera < 12.1 */
+                animation: fadein 2s;
+            }
+            
+            @keyframes fadein {
+                from { opacity: 0; }
+                to   { opacity: 1; }
+            }
+            
+            /* Firefox < 16 */
+            @-moz-keyframes fadein {
+                from { opacity: 0; }
+                to   { opacity: 1; }
+            }
+            
+            /* Safari, Chrome and Opera > 12.1 */
+            @-webkit-keyframes fadein {
+                from { opacity: 0; }
+                to   { opacity: 1; }
+            }
+            
+            /* Internet Explorer */
+            @-ms-keyframes fadein {
+                from { opacity: 0; }
+                to   { opacity: 1; }
+            }
+            
+            /* Opera < 12.1 */
+            @-o-keyframes fadein {
+                from { opacity: 0; }
+                to   { opacity: 1; }
+            }
+        </style>
+    </head>
+    <body>
+        <div id="app">
+            <div id="header" class="forward">
+                <div class="container fadeIn">
+                    <div class="row">
+                        <div class="col">
+                            <h1>SoCal<small> Quakes</small></h1>
+                        </div>
+                        <div class="col text-right">
+                            <img class="logo" src="logo.png"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id='map'></div>
+            <div id="footer" class="forward text-center">
+                <span id="footer-message">Data provided by earthquake.usgs.gov</span>
+            </div>
+        </div>
+        <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+        <script>
+
+            // Get route params for initiation
+            // params should be ?lng=...&lat=...&date=...
+            var params = [];
+            var starttime = String;
+            var endtime = String;
+            var date = null;
+            var uri = String;
+            var map = null;
+
+            // process the params
+            window.location.search.substr(1).split("&").map(function(param){
+                var objKey = param.split("=");
+                if(objKey[0] ==='lng'){
+                    params[0] = objKey[1];
+                }
+                if(objKey[0] ==='lat'){
+                    params[1] = objKey[1];
+                }
+                if(objKey[0] ==='date'){
+                    date = new Date(Date.parse(objKey[1]));
+                }
+            });
+            // set defaults params if none provided
+            if(params.length !== 2){
+                params = [-117.6709, 35.62246]; // default to OC
+            }
+            if(!date){
+                date = new Date();  
+            }
+            // get times and convert to string
+            endtime = date.toISOString();
+            starttime = new Date(date.setDate(date.getDate() - 1)).toISOString();
+
+            // update the footer
+            document.getElementById("footer-message").innerHTML = "Data for " + endtime.substring(0, 10) + " provided by earthquake.usgs.gov";
+            
+            uri = 'https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=' + starttime + '&endtime=' +  endtime;
+
+            // initiate MapBox
+            mapboxgl.accessToken = "pk.eyJ1IjoiaW5pdGlhbGFwcHMiLCJhIjoiY2pzMnBzZGZnMDM0azQ5bDdyOHdraHV1ZyJ9.JdYkI5UwxhJgJOkbm2_8rw";
+            map = new mapboxgl.Map({
+                container: "map",
+                style: 'mapbox://styles/mapbox/dark-v9',
+                center: params,
+                bearing: 180,
+                zoom: 6
+            });
+
+            // Load Map
+            map.on('load', function() {
+                // Create a popup, but don't add it to the map yet.
+                var popup = new mapboxgl.Popup({
+                    closeButton: false,
+                    closeOnClick: false
+                });
+
+                map.easeTo({
+                    pitch: 60,
+                    bearing: 0,
+                    zoom: 9.7,
+                    duration: 8000
+                });
+            
+                // get data from 
+                map.addSource('earthquakes', {
+                    type: 'geojson',
+                    data: uri
+                });
+            
+                var blueColour = 'hsl(204, 40%, 50%)';
+            
+                map.addLayer({
+                    "id": "blur",
+                    "type": "circle",
+                    "source": "earthquakes",
+                    "maxzoom":8,
+                    "paint": {
+                        "circle-color": blueColour,
+                        "circle-opacity": {
+                            "base": 1.8,
+                            "stops": [
+                                [0, 0.1],
+                                [11, 0.6],
+                                [20, 1]
+                            ]
+                        },
+                        'circle-radius': {
+                            'property': 'mag',
+                            "base": 1,
+                            'stops': [
+                                [{zoom: 0,  value: 1}, 2.5],
+                                [{zoom: 0,  value: 7}, 100],
+                                [{zoom: 11, value: 1}, 20],
+                                [{zoom: 11, value: 7}, 240],
+                                [{zoom: 20, value: 1}, 50],
+                                [{zoom: 20, value: 7}, 600]
+                            ]
+                        },
+                        'circle-blur': {
+                            "base": 1.8,
+                            'property': 'mag',
+                            'stops': [
+                                [{zoom: 0,  value: 1}, 0.25],
+                                [{zoom: 0,  value: 5}, 10],
+                                [{zoom: 11, value: 1}, 2],
+                                [{zoom: 11, value: 5}, 240],
+                                [{zoom: 20, value: 1}, 5],
+                                [{zoom: 20, value: 5}, 600]
+                            ]
+                        }
+                    },
+                    "paint.stations":{
+                        "circle-color":"#666"
+                    }
+                });
+                    
+                map.addLayer({
+                    "id": "smalldot",
+                    "type": "circle",
+                    "source": "earthquakes",
+                    "layout": {
+                    },
+                    "paint": {
+                    "circle-color": 'white',
+                    'circle-radius': {
+                        'property': 'mag',
+                        "base": 1.1,
+                        "stops": [
+                        [2, 2],
+                        [7, 10]
+                        ]
+                    }
+                    },
+                    "paint.stations":{
+                    "circle-color":"#ccc"
+                    }
+                });
+            
+                map.on('mouseenter', 'smalldot', function(e) {
+        
+                    // Change the cursor style as a UI indicator.
+                    map.getCanvas().style.cursor = 'pointer';
+                    var date = new Date(e.features[0].properties.time);
+                    var coordinates = e.features[0].geometry.coordinates.slice();
+                    var description = "<b>Magnitude: " + e.features[0].properties.mag + "</b><br>" +
+                        "<span>" + e.features[0].properties.place + "</span><br>" +
+                        "<span>" + date.toLocaleString() + "</span><br>";
+                    
+                    // Ensure that if the map is zoomed out such that multiple
+                    // copies of the feature are visible, the popup appears
+                    // over the copy being pointed to.
+                    while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                        coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+                    }
+            
+                    // Populate the popup and set its coordinates
+                    // based on the feature found.
+                    popup.setLngLat(coordinates)
+                    .setHTML(description)
+                    .addTo(map);
+                });
+
+                map.on('mouseleave', 'smalldot', function() {
+                    map.getCanvas().style.cursor = '';
+                    popup.remove();
+                });
+
+                map.on('touchstart', 'smalldot', function(e) {
+
+                    var date = new Date(e.features[0].properties.time);
+                    var coordinates = e.features[0].geometry.coordinates.slice();
+                    var description = "<b>Magnitude: " + e.features[0].properties.mag + "</b><br>" +
+                        "<span>" + e.features[0].properties.place + "</span><br>" +
+                        "<span>" + date.toLocaleString() + "</span><br>";
+                    
+                    // Ensure that if the map is zoomed out such that multiple
+                    // copies of the feature are visible, the popup appears
+                    // over the copy being pointed to.
+                    while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                        coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+                    }
+
+                    // Populate the popup and set its coordinates
+                    // based on the feature found.
+                    popup.setLngLat(coordinates)
+                    .setHTML(description)
+                    .addTo(map);
+                });
+                
+            });
+
+            
+        </script>
+    </body>
+</html>
+
+  
+  
+  
